@@ -193,7 +193,7 @@ export default function RemotePage() {
             {logsLoading && logs.length === 0 ? (
               <p className="text-sm text-muted-foreground">Loading logs...</p>
             ) : (
-              <div className="max-h-[420px] space-y-2 overflow-y-auto pr-1">
+              <div className="max-h-105 space-y-2 overflow-y-auto pr-1">
                 {logs.map((entry) => (
                   <div
                     className="rounded-lg border border-border/70 bg-muted/25 px-3 py-2"

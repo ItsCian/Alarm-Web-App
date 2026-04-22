@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Offline - Alarm Remote</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, oklch(0.148 0.004 228.8) 0%, oklch(0.218 0.008 223.9) 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      background: oklch(0.987 0.002 197.1);
+      border-radius: 12px;
+      padding: 40px;
+      max-width: 500px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    }
+    .icon {
+      font-size: 64px;
+      margin-bottom: 20px;
+    }
+    h1 {
+      color: oklch(0.148 0.004 228.8);
+      margin-bottom: 10px;
+      font-size: 28px;
+    }
+    p {
+      color: oklch(0.56 0.021 213.5);
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+    .status {
+      background: oklch(0.577 0.245 27.325 / 0.1);
+      border: 1px solid oklch(0.577 0.245 27.325);
+      color: oklch(0.577 0.245 27.325);
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .actions {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .btn-primary {
+      background: oklch(0.508 0.118 165.612);
+      color: oklch(0.979 0.021 166.113);
+    }
+    .btn-primary:hover {
+      background: oklch(0.432 0.095 166.913);
+      transform: translateY(-2px);
+    }
+    .btn-secondary {
+      background: oklch(0.963 0.002 197.1);
+      color: oklch(0.148 0.004 228.8);
+      border: 1px solid oklch(0.925 0.005 214.3);
+    }
+    .btn-secondary:hover {
+      background: oklch(0.925 0.005 214.3);
+    }
+    .footer {
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid oklch(0.925 0.005 214.3);
+      font-size: 12px;
+      color: oklch(0.56 0.021 213.5);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">📡</div>
+    <h1>You're Offline</h1>
+    <p>The alarm remote requires an internet connection to function. Please check your network and try again.</p>
+    <div class="status">Connection Status: Offline</div>
+    <div class="actions">
+      <button class="btn-primary" onclick="location.reload()">Retry Connection</button>
+      <button class="btn-secondary" onclick="history.back()">Go Back</button>
+    </div>
+    <div class="footer">
+      <p>The app will automatically reload when your connection is restored.</p>
+    </div>
+  </div>
+
+  <script>
+    // Auto-detect when connection is restored
+    window.addEventListener('online', () => {
+      console.log('Connection restored');
+      // Small delay to ensure network is stable
+      setTimeout(() => {
+        location.reload();
+      }, 1000);
+    });
+  </script>
+</body>
+</html>
