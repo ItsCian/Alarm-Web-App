@@ -222,14 +222,6 @@ type AlarmCommandRow = {
   processed_at: string | null;
 };
 
-type FakeProcessResultRow = {
-  ok: boolean;
-  message: string;
-  command_id: string | null;
-  action: AlarmAction | null;
-  command_status: "pending" | "rejected" | "sent" | "success" | "failed";
-};
-
 function normalizeAlarmState(row: AlarmStateRow): AlarmSystemState {
   return {
     status: row.status,
@@ -498,46 +490,5 @@ export async function requestAlarmAction(
     ok: resultRow.ok,
     message: resultRow.message,
     commandId: resultRow.command_id,
-  };
-}
-
-export async function updateAlarmDeviceConnection(isConnected: boolean) {
-  const { error } = await supabase.rpc("update_alarm_device_status", {
-    p_is_connected: isConnected,
-    p_last_heartbeat_at: new Date().toISOString(),
-  });
-
-  if (error) {
-    throw new Error(error.message);
-  }
-}
-
-export async function fakeAlarmProcessNextCommand() {
-  const { data, error } = await supabase.rpc("fake_alarm_process_next_command");
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  const resultRow = (
-    Array.isArray(data) ? data[0] : data
-  ) as FakeProcessResultRow | null;
-
-  if (!resultRow) {
-    return {
-      ok: false,
-      message: "No response from fake_alarm_process_next_command",
-      commandId: null,
-      action: null,
-      commandStatus: "failed" as const,
-    };
-  }
-
-  return {
-    ok: resultRow.ok,
-    message: resultRow.message,
-    commandId: resultRow.command_id,
-    action: resultRow.action,
-    commandStatus: resultRow.command_status,
   };
 }

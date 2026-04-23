@@ -4,6 +4,8 @@ import { useEffect } from "react";
 
 export function ServiceWorkerRegister() {
   useEffect(() => {
+    let updateInterval: ReturnType<typeof setInterval> | null = null;
+
     // Register service worker
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker
@@ -12,11 +14,29 @@ export function ServiceWorkerRegister() {
           console.log("Service Worker registered successfully:", registration);
 
           // Check for updates periodically
-          const interval = setInterval(() => {
+          updateInterval = setInterval(() => {
             registration.update();
           }, 60000); // Check every minute
 
-          return () => clearInterval(interval);
+          if (
+            "Notification" in window &&
+            Notification.permission === "default"
+          ) {
+            const wantsNotifications = window.confirm(
+              "Would you like to enable notifications for alarm status updates?",
+            );
+
+            if (wantsNotifications) {
+              Notification.requestPermission().then((permission) => {
+                if (permission === "granted") {
+                  registration.showNotification("Alarm notifications enabled", {
+                    body: "You will now receive important alarm updates.",
+                    tag: "notification-enabled",
+                  });
+                }
+              });
+            }
+          }
         })
         .catch((error) => {
           console.error("Service Worker registration failed:", error);
@@ -42,6 +62,9 @@ export function ServiceWorkerRegister() {
     window.addEventListener("offline", handleOffline);
 
     return () => {
+      if (updateInterval) {
+        clearInterval(updateInterval);
+      }
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };

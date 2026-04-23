@@ -229,84 +229,142 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.update_alarm_device_status(BOOLEAN, TIMESTAMP WITH TIME ZONE) TO anon, authenticated;
 
--- Temporary helper used by the /test_alarm page to emulate a physical device.
-CREATE OR REPLACE FUNCTION public.fake_alarm_process_next_command()
-RETURNS TABLE(ok BOOLEAN, message TEXT, command_id UUID, action TEXT, command_status TEXT)
+-- Pico helper: acknowledge command execution and write normalized logs.
+CREATE OR REPLACE FUNCTION public.report_alarm_command_result(
+  p_command_id UUID,
+  p_status TEXT,
+  p_error_message TEXT DEFAULT NULL
+)
+RETURNS TABLE(ok BOOLEAN, message TEXT)
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  v_connected BOOLEAN := FALSE;
-  v_command RECORD;
+  v_command public.alarm_commands%ROWTYPE;
+  v_next_state TEXT;
 BEGIN
-  SELECT is_connected
-    INTO v_connected
-  FROM public.alarm_device_status
-  WHERE id = 1;
-
-  IF COALESCE(v_connected, FALSE) = FALSE THEN
-    RETURN QUERY SELECT FALSE, 'Fake alarm is offline. Set connection online first.', NULL::UUID, NULL::TEXT, 'failed'::TEXT;
-    RETURN;
+  IF p_status NOT IN ('sent', 'success', 'failed') THEN
+    RAISE EXCEPTION 'Unsupported command status: %', p_status;
   END IF;
 
-  SELECT ac.id, ac.action, ac.requested_by
+  SELECT *
     INTO v_command
-  FROM public.alarm_commands AS ac
-  WHERE ac.status = 'pending'
-  ORDER BY ac.created_at ASC
-  LIMIT 1;
+  FROM public.alarm_commands
+  WHERE id = p_command_id;
 
   IF NOT FOUND THEN
-    RETURN QUERY SELECT TRUE, 'No pending commands to process.', NULL::UUID, NULL::TEXT, 'success'::TEXT;
+    RETURN QUERY SELECT FALSE, 'Command not found';
     RETURN;
   END IF;
 
   UPDATE public.alarm_commands
-  SET status = 'success',
-      processed_at = NOW(),
-      error_message = NULL
-  WHERE id = v_command.id;
+  SET status = p_status,
+      error_message = CASE WHEN p_status = 'failed' THEN COALESCE(p_error_message, 'Command failed on device') ELSE NULL END,
+      processed_at = NOW()
+  WHERE id = p_command_id;
 
-  IF v_command.action = 'arm' THEN
+  IF p_status = 'success' THEN
+    v_next_state := CASE
+      WHEN v_command.action = 'arm' THEN 'armed'
+      WHEN v_command.action = 'disarm' THEN 'disarmed'
+      ELSE (SELECT status FROM public.alarm_system_state WHERE id = 1)
+    END;
+
     UPDATE public.alarm_system_state
-    SET status = 'armed',
+    SET status = COALESCE(v_next_state, status),
         updated_at = NOW(),
-        last_command_id = v_command.id,
+        last_command_id = p_command_id,
         last_error = NULL
     WHERE id = 1;
-  ELSIF v_command.action = 'disarm' THEN
-    UPDATE public.alarm_system_state
-    SET status = 'disarmed',
-        updated_at = NOW(),
-        last_command_id = v_command.id,
-        last_error = NULL
-    WHERE id = 1;
-  ELSE
+
+    INSERT INTO public.alarm_logs (level, event_type, message, metadata)
+    VALUES (
+      'info',
+      CASE
+        WHEN v_command.action = 'arm' THEN 'alarm_armed'
+        WHEN v_command.action = 'disarm' THEN 'alarm_disarmed'
+        ELSE 'alarm_test_ok'
+      END,
+      CASE
+        WHEN v_command.action = 'arm' THEN 'Alarm set on by device'
+        WHEN v_command.action = 'disarm' THEN 'Alarm disarmed by device'
+        ELSE 'Alarm test executed by device'
+      END,
+      jsonb_build_object(
+        'command_id', p_command_id,
+        'action', v_command.action,
+        'requested_by', v_command.requested_by,
+        'reported_status', p_status
+      )
+    );
+  ELSIF p_status = 'failed' THEN
     UPDATE public.alarm_system_state
     SET updated_at = NOW(),
-        last_command_id = v_command.id,
-        last_error = NULL
+        last_command_id = p_command_id,
+        last_error = COALESCE(p_error_message, 'Device command failed')
     WHERE id = 1;
+
+    INSERT INTO public.alarm_logs (level, event_type, message, metadata)
+    VALUES (
+      'error',
+      'command_failed_device',
+      format('Device failed to execute %s command', v_command.action),
+      jsonb_build_object(
+        'command_id', p_command_id,
+        'action', v_command.action,
+        'requested_by', v_command.requested_by,
+        'error_message', COALESCE(p_error_message, 'Device command failed')
+      )
+    );
+  ELSE
+    INSERT INTO public.alarm_logs (level, event_type, message, metadata)
+    VALUES (
+      'info',
+      'command_sent_device',
+      format('Device acknowledged %s command as sent', v_command.action),
+      jsonb_build_object(
+        'command_id', p_command_id,
+        'action', v_command.action,
+        'requested_by', v_command.requested_by
+      )
+    );
   END IF;
 
-  INSERT INTO public.alarm_logs (level, event_type, message, metadata)
-  VALUES (
-    'info',
-    format('%s_processed_fake', v_command.action),
-    format('Fake alarm processed %s command', v_command.action),
-    jsonb_build_object(
-      'command_id', v_command.id,
-      'action', v_command.action,
-      'requested_by', v_command.requested_by
-    )
-  );
-
-  RETURN QUERY SELECT TRUE, format('Processed %s command', v_command.action), v_command.id, v_command.action, 'success'::TEXT;
+  RETURN QUERY SELECT TRUE, 'Command result stored';
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION public.fake_alarm_process_next_command() TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.report_alarm_command_result(UUID, TEXT, TEXT) TO anon, authenticated;
+
+-- Pico helper: write a log entry when a sensor/intrusion triggers the alarm.
+CREATE OR REPLACE FUNCTION public.report_alarm_trigger(
+  p_trigger_source TEXT DEFAULT 'sensor',
+  p_message TEXT DEFAULT 'Alarm triggered',
+  p_metadata JSONB DEFAULT '{}'::jsonb
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  UPDATE public.alarm_system_state
+  SET updated_at = NOW(),
+      last_error = NULL
+  WHERE id = 1;
+
+  INSERT INTO public.alarm_logs (level, event_type, message, metadata)
+  VALUES (
+    'warning',
+    'alarm_triggered',
+    p_message,
+    COALESCE(p_metadata, '{}'::jsonb) || jsonb_build_object('trigger_source', p_trigger_source)
+  );
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.report_alarm_trigger(TEXT, TEXT, JSONB) TO anon, authenticated;
 
 -- ============================================================================
 -- 5. SEED BASE DATA

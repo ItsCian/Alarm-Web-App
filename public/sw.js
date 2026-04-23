@@ -114,3 +114,54 @@ self.addEventListener('message', (event) => {
     self.skipWaiting();
   }
 });
+
+// Show push notifications when a push event is received.
+self.addEventListener('push', (event) => {
+  let payload = {
+    title: 'Alarm update',
+    body: 'You have a new alarm event.',
+    url: '/remote'
+  };
+
+  if (event.data) {
+    try {
+      payload = { ...payload, ...event.data.json() };
+    } catch {
+      payload.body = event.data.text();
+    }
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      tag: 'alarm-update',
+      data: {
+        url: payload.url || '/remote'
+      }
+    })
+  );
+});
+
+// Focus an existing app window (or open one) when a notification is clicked.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = event.notification.data?.url || '/remote';
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ('focus' in client) {
+          client.focus();
+          if ('navigate' in client) {
+            client.navigate(targetUrl);
+          }
+          return;
+        }
+      }
+
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl);
+      }
+    })
+  );
+});

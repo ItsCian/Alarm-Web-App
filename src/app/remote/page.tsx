@@ -137,9 +137,9 @@ export default function RemotePage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Commands are written to alarm_commands and picked up by the
-                Raspberry Pi process later. The database already validates
-                offline errors for arm, disarm, and test.
+                Commands are written to alarm_commands and picked up by the Pico
+                device process. The database already validates offline errors
+                for arm, disarm, and test.
               </p>
 
               <div className="flex flex-wrap gap-2">
