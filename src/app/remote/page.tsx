@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   type AlarmAction,
+  clearAlarmHistory,
   requestAlarmAction,
   useAlarmLogs,
   useAlarmSystem,
@@ -31,9 +32,10 @@ export default function RemotePage() {
   } = useAlarmLogs(25);
 
   const [runningAction, setRunningAction] = useState<AlarmAction | null>(null);
+  const [clearingHistory, setClearingHistory] = useState(false);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
 
-  const isBusy = loading || runningAction !== null;
+  const isBusy = loading || runningAction !== null || clearingHistory;
   const alarmStatus = state?.status ?? "disarmed";
   const isOnline = device?.isConnected ?? false;
 
@@ -61,6 +63,36 @@ export default function RemotePage() {
       });
     } finally {
       setRunningAction(null);
+    }
+  }
+
+  async function handleClearHistory() {
+    const confirmed = window.confirm(
+      "This will permanently clear all event logs and command queue entries. Continue?",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setClearingHistory(true);
+      const result = await clearAlarmHistory();
+      setFeedback({
+        level: "info",
+        text: `History cleared: ${result.clearedLogs} logs and ${result.clearedCommands} commands removed.`,
+      });
+      await Promise.all([refetch(), refetchLogs()]);
+    } catch (err) {
+      setFeedback({
+        level: "error",
+        text:
+          err instanceof Error
+            ? err.message
+            : "Failed to clear event logs and queue",
+      });
+    } finally {
+      setClearingHistory(false);
     }
   }
 
@@ -163,6 +195,13 @@ export default function RemotePage() {
                   variant="secondary"
                 >
                   {runningAction === "test" ? "Testing..." : "Test Alarm"}
+                </Button>
+                <Button
+                  disabled={isBusy}
+                  onClick={handleClearHistory}
+                  variant="destructive"
+                >
+                  {clearingHistory ? "Clearing..." : "Clear Events + Queue"}
                 </Button>
               </div>
 

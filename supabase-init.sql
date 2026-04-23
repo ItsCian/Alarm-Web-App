@@ -395,6 +395,35 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.report_alarm_trigger(TEXT, TEXT, JSONB) TO anon, authenticated;
 
+-- Web helper: clear event logs and command history in one atomic operation.
+CREATE OR REPLACE FUNCTION public.clear_alarm_history()
+RETURNS TABLE(cleared_logs BIGINT, cleared_commands BIGINT)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_logs BIGINT := 0;
+  v_commands BIGINT := 0;
+BEGIN
+  WITH deleted_logs AS (
+    DELETE FROM public.alarm_logs
+    RETURNING 1
+  )
+  SELECT COUNT(*) INTO v_logs FROM deleted_logs;
+
+  WITH deleted_commands AS (
+    DELETE FROM public.alarm_commands
+    RETURNING 1
+  )
+  SELECT COUNT(*) INTO v_commands FROM deleted_commands;
+
+  RETURN QUERY SELECT v_logs, v_commands;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.clear_alarm_history() TO anon, authenticated;
+
 -- ============================================================================
 -- 5. SEED BASE DATA
 -- ============================================================================

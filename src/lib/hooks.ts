@@ -212,6 +212,11 @@ type AlarmActionResultRow = {
   command_id: string | null;
 };
 
+type ClearAlarmHistoryResultRow = {
+  cleared_logs: number;
+  cleared_commands: number;
+};
+
 type AlarmCommandRow = {
   id: string;
   created_at: string;
@@ -496,5 +501,29 @@ export async function requestAlarmAction(
     ok: resultRow.ok,
     message: resultRow.message,
     commandId: resultRow.command_id,
+  };
+}
+
+export async function clearAlarmHistory() {
+  const { data, error } = await supabase.rpc("clear_alarm_history");
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const resultRow = (
+    Array.isArray(data) ? data[0] : data
+  ) as ClearAlarmHistoryResultRow | null;
+
+  if (!resultRow) {
+    return {
+      clearedLogs: 0,
+      clearedCommands: 0,
+    };
+  }
+
+  return {
+    clearedLogs: resultRow.cleared_logs,
+    clearedCommands: resultRow.cleared_commands,
   };
 }
