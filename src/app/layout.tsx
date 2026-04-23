@@ -15,6 +15,14 @@ export const metadata: Metadata = {
   keywords: ["alarm", "security", "remote", "raspberry pi"],
   authors: [{ name: "Alarm Team" }],
   creator: "Alarm Team",
+  icons: {
+    icon: [
+      { url: "/icon-192.svg", type: "image/svg+xml" },
+      { url: "/icon-512.svg", type: "image/svg+xml" },
+    ],
+    apple: [{ url: "/apple-icon.svg", type: "image/svg+xml" }],
+    shortcut: [{ url: "/icon-192.svg", type: "image/svg+xml" }],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -37,8 +45,8 @@ export const viewport: Viewport = {
   userScalable: true,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#1a1a1a" },
+    { media: "(prefers-color-scheme: light)", color: "#22c55e" },
+    { media: "(prefers-color-scheme: dark)", color: "#166534" },
   ],
 };
 
@@ -54,10 +62,7 @@ export default function RootLayout({
     >
       <head>
         <link rel="manifest" href="/manifest.json" />
-        <link
-          rel="apple-touch-icon"
-          href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23065f46' width='192' height='192' rx='48'/><text x='50%' y='50%' font-size='120' font-weight='bold' fill='%23ffffff' text-anchor='middle' dominant-baseline='central' font-family='system-ui, -apple-system, sans-serif'>A</text></svg>"
-        />
+        <link rel="apple-touch-icon" href="/apple-icon.svg" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta
           name="apple-mobile-web-app-status-bar-style"
@@ -67,12 +72,12 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta
           name="theme-color"
-          content="#ffffff"
+          content="#22c55e"
           media="(prefers-color-scheme: light)"
         />
         <meta
           name="theme-color"
-          content="#1a1a1a"
+          content="#166534"
           media="(prefers-color-scheme: dark)"
         />
       </head>

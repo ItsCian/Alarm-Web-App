@@ -1,0 +1,16 @@
+<svg width="512" height="140" viewBox="0 0 512 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="alarmGradient" x1="16" y1="12" x2="124" y2="124" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#22C55E"/>
+      <stop offset="1" stop-color="#15803D"/>
+    </linearGradient>
+  </defs>
+  <rect x="16" y="12" width="112" height="112" rx="28" fill="url(#alarmGradient)"/>
+  <circle cx="72" cy="64" r="28" fill="white"/>
+  <path d="M72 50C66.4772 50 62 54.4772 62 60V73L56 81H88L82 73V60C82 54.4772 77.5228 50 72 50Z" fill="#15803D"/>
+  <rect x="67" y="83" width="10" height="6" rx="3" fill="#15803D"/>
+  <path d="M52 44C47.5 49 45 55.5 45 62" stroke="white" stroke-width="4" stroke-linecap="round"/>
+  <path d="M92 44C96.5 49 99 55.5 99 62" stroke="white" stroke-width="4" stroke-linecap="round"/>
+  <text x="150" y="72" fill="#14532D" font-size="44" font-family="Outfit, Poppins, 'Segoe UI', sans-serif" font-weight="700" letter-spacing="0.5">Alarm Remote</text>
+  <text x="151" y="98" fill="#4D7C0F" font-size="15" font-family="Outfit, Poppins, 'Segoe UI', sans-serif" font-weight="500" letter-spacing="1.8">SECURITY CONTROL</text>
+</svg>

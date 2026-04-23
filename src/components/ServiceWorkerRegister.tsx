@@ -69,6 +69,8 @@ export function ServiceWorkerRegister() {
               registration.showNotification("Alarm notifications enabled", {
                 body: "You will now receive important alarm updates.",
                 tag: "notification-enabled",
+                icon: "/icon-192.svg",
+                badge: "/notification-badge.svg",
               });
             }
           } else if (Notification.permission === "granted") {

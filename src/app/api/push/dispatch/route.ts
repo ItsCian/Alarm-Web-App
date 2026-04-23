@@ -11,6 +11,8 @@ type NotificationPayload = {
   title: string;
   body: string;
   tag: string;
+  icon: string;
+  badge: string;
   url: string;
 };
 
@@ -26,6 +28,8 @@ function getPayload(eventType: string, message: string): NotificationPayload {
       title: "Alarm in 10 seconds",
       body: normalizedMessage || "Warning: alarm will trigger in 10 seconds.",
       tag: "alarm-warning-10s",
+      icon: "/icon-192.svg",
+      badge: "/notification-badge.svg",
       url: "/remote",
     };
   }
@@ -38,6 +42,8 @@ function getPayload(eventType: string, message: string): NotificationPayload {
       title: "Alarm active",
       body: normalizedMessage || "The alarm is sounding now.",
       tag: "alarm-active",
+      icon: "/icon-192.svg",
+      badge: "/notification-badge.svg",
       url: "/remote",
     };
   }
@@ -46,6 +52,8 @@ function getPayload(eventType: string, message: string): NotificationPayload {
     title: "Alarm update",
     body: normalizedMessage || "A new alarm event is available.",
     tag: "alarm-update",
+    icon: "/icon-192.svg",
+    badge: "/notification-badge.svg",
     url: "/remote",
   };
 }

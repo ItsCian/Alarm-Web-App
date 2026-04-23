@@ -1,6 +1,7 @@
 // src/app/page.tsx
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -96,6 +97,13 @@ export default function HomePage() {
         {/* ── Project summary ─────────────────────────────────────────── */}
         <Card>
           <CardHeader>
+            <Image
+              src="/logo.svg"
+              alt="Alarm Remote logo"
+              width={512}
+              height={140}
+              className="h-12 w-auto"
+            />
             <div className="flex items-center gap-2 mb-1">
               <span
                 className="h-2 w-2 rounded-full bg-emerald-500"

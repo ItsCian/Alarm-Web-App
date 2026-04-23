@@ -1,0 +1,14 @@
+<svg width="192" height="192" viewBox="0 0 192 192" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="alarmIconGradient192" x1="20" y1="16" x2="172" y2="176" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#22C55E"/>
+      <stop offset="1" stop-color="#166534"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="176" height="176" rx="44" fill="url(#alarmIconGradient192)"/>
+  <circle cx="96" cy="88" r="44" fill="white"/>
+  <path d="M96 66C87.1634 66 80 73.1634 80 82V101L70 115H122L112 101V82C112 73.1634 104.837 66 96 66Z" fill="#166534"/>
+  <rect x="88" y="118" width="16" height="10" rx="5" fill="#166534"/>
+  <path d="M64 58C57 66 53 76 53 86" stroke="white" stroke-width="6" stroke-linecap="round"/>
+  <path d="M128 58C135 66 139 76 139 86" stroke="white" stroke-width="6" stroke-linecap="round"/>
+</svg>

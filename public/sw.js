@@ -1,8 +1,13 @@
-const CACHE_NAME = 'alarm-remote-v1';
-const RUNTIME_CACHE = 'alarm-remote-runtime-v1';
+const CACHE_NAME = 'alarm-remote-v2';
+const RUNTIME_CACHE = 'alarm-remote-runtime-v2';
 const STATIC_ASSETS = [
   '/',
-  '/offline.html'
+  '/offline.html',
+  '/manifest.json',
+  '/logo.svg',
+  '/icon-192.svg',
+  '/icon-512.svg',
+  '/notification-badge.svg'
 ];
 
 // Install event - cache static assets
@@ -120,6 +125,9 @@ self.addEventListener('push', (event) => {
   let payload = {
     title: 'Alarm update',
     body: 'You have a new alarm event.',
+    tag: 'alarm-update',
+    icon: '/icon-192.svg',
+    badge: '/notification-badge.svg',
     url: '/remote'
   };
 
@@ -134,7 +142,9 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(payload.title, {
       body: payload.body,
-      tag: 'alarm-update',
+      tag: payload.tag || 'alarm-update',
+      icon: payload.icon || '/icon-192.svg',
+      badge: payload.badge || '/notification-badge.svg',
       data: {
         url: payload.url || '/remote'
       }

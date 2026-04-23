@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -116,6 +117,8 @@ export default function RemotePage() {
       await registration.showNotification("Alarm notifications enabled", {
         body: "You will receive alarm active alerts.",
         tag: "alarm-notification-test",
+        icon: "/icon-192.svg",
+        badge: "/notification-badge.svg",
         data: {
           url: "/remote",
         },
@@ -193,6 +196,13 @@ export default function RemotePage() {
     <main className="min-h-screen bg-background px-4 py-10 text-foreground">
       <div className="mx-auto w-full max-w-5xl space-y-6">
         <header className="space-y-2">
+          <Image
+            src="/logo.svg"
+            alt="Alarm Remote logo"
+            width={512}
+            height={140}
+            className="h-12 w-auto"
+          />
           <h1 className="text-3xl font-semibold tracking-tight">
             Alarm Realtime Remote
           </h1>
