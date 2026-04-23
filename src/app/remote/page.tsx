@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,9 +17,15 @@ type Feedback = {
   text: string;
 };
 
+type NotificationState = NotificationPermission | "unsupported";
+
 function formatTimestamp(value: string | null | undefined) {
   if (!value) return "-";
   return new Date(value).toLocaleString();
+}
+
+function isActiveAlarmEvent(eventType: string) {
+  return eventType === "alarm_triggered";
 }
 
 export default function RemotePage() {
@@ -33,6 +39,9 @@ export default function RemotePage() {
 
   const [runningAction, setRunningAction] = useState<AlarmAction | null>(null);
   const [clearingHistory, setClearingHistory] = useState(false);
+  const [requestingNotifications, setRequestingNotifications] = useState(false);
+  const [notificationState, setNotificationState] =
+    useState<NotificationState>("unsupported");
   const [feedback, setFeedback] = useState<Feedback | null>(null);
 
   const isBusy = loading || runningAction !== null || clearingHistory;
@@ -44,6 +53,90 @@ export default function RemotePage() {
     const latest = logs[0];
     return `${latest.message} (${new Date(latest.createdAt).toLocaleTimeString()})`;
   }, [logs]);
+
+  useEffect(() => {
+    if (!("Notification" in window)) {
+      setNotificationState("unsupported");
+      return;
+    }
+
+    const syncPermission = () => {
+      setNotificationState(Notification.permission);
+    };
+
+    syncPermission();
+    window.addEventListener("focus", syncPermission);
+    document.addEventListener("visibilitychange", syncPermission);
+
+    return () => {
+      window.removeEventListener("focus", syncPermission);
+      document.removeEventListener("visibilitychange", syncPermission);
+    };
+  }, []);
+
+  async function handleEnableNotifications() {
+    if (!("Notification" in window)) {
+      setFeedback({
+        level: "error",
+        text: "This browser does not support notifications.",
+      });
+      return;
+    }
+
+    try {
+      setRequestingNotifications(true);
+
+      let permission = Notification.permission;
+      if (permission === "default") {
+        permission = await Notification.requestPermission();
+      }
+
+      setNotificationState(permission);
+
+      if (permission !== "granted") {
+        setFeedback({
+          level: "error",
+          text:
+            permission === "denied"
+              ? "Notifications are blocked in your browser settings."
+              : "Notification permission was not granted.",
+        });
+        return;
+      }
+
+      if (!("serviceWorker" in navigator)) {
+        setFeedback({
+          level: "error",
+          text: "Service worker is not available, cannot send notification.",
+        });
+        return;
+      }
+
+      const registration = await navigator.serviceWorker.ready;
+      await registration.showNotification("Alarm notifications enabled", {
+        body: "You will receive alarm active alerts.",
+        tag: "alarm-notification-test",
+        data: {
+          url: "/remote",
+        },
+      });
+
+      setFeedback({
+        level: "info",
+        text: "Notifications are enabled. Test alert sent.",
+      });
+    } catch (err) {
+      setFeedback({
+        level: "error",
+        text:
+          err instanceof Error
+            ? err.message
+            : "Failed to update notification settings",
+      });
+    } finally {
+      setRequestingNotifications(false);
+    }
+  }
 
   async function runAction(action: AlarmAction) {
     try {
@@ -146,6 +239,23 @@ export default function RemotePage() {
               </div>
 
               <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Notifications</span>
+                <Badge
+                  variant={
+                    notificationState === "granted"
+                      ? "default"
+                      : notificationState === "denied"
+                        ? "destructive"
+                        : "outline"
+                  }
+                >
+                  {notificationState === "unsupported"
+                    ? "unsupported"
+                    : notificationState}
+                </Badge>
+              </div>
+
+              <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Last heartbeat</span>
                 <span>{formatTimestamp(device?.lastHeartbeatAt)}</span>
               </div>
@@ -203,6 +313,17 @@ export default function RemotePage() {
                 >
                   {clearingHistory ? "Clearing..." : "Clear Events + Queue"}
                 </Button>
+                <Button
+                  disabled={requestingNotifications}
+                  onClick={handleEnableNotifications}
+                  variant="secondary"
+                >
+                  {requestingNotifications
+                    ? "Updating notifications..."
+                    : notificationState === "granted"
+                      ? "Send Notification Test"
+                      : "Enable Notifications"}
+                </Button>
               </div>
 
               {feedback ? (
@@ -241,15 +362,24 @@ export default function RemotePage() {
                     <div className="mb-1 flex items-center justify-between gap-2 text-xs text-muted-foreground">
                       <span>{formatTimestamp(entry.createdAt)}</span>
                       <Badge
+                        className={
+                          isActiveAlarmEvent(entry.eventType)
+                            ? "bg-red-600 text-white hover:bg-red-700"
+                            : undefined
+                        }
                         variant={
-                          entry.level === "error"
-                            ? "destructive"
-                            : entry.level === "warning"
-                              ? "secondary"
-                              : "outline"
+                          isActiveAlarmEvent(entry.eventType)
+                            ? "default"
+                            : entry.level === "error"
+                              ? "destructive"
+                              : entry.level === "warning"
+                                ? "secondary"
+                                : "outline"
                         }
                       >
-                        {entry.level}
+                        {isActiveAlarmEvent(entry.eventType)
+                          ? "active"
+                          : entry.level}
                       </Badge>
                     </div>
                     <p className="text-sm">{entry.message}</p>

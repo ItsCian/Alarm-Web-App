@@ -258,6 +258,26 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.update_alarm_device_status(BOOLEAN, TIMESTAMP WITH TIME ZONE) TO anon, authenticated;
 
+-- Pico helper: silent heartbeat update using database time (no log spam).
+CREATE OR REPLACE FUNCTION public.alarm_heartbeat(
+  p_is_connected BOOLEAN DEFAULT TRUE
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  UPDATE public.alarm_device_status
+  SET is_connected = p_is_connected,
+      last_heartbeat_at = NOW(),
+      updated_at = NOW()
+  WHERE id = 1;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.alarm_heartbeat(BOOLEAN) TO anon, authenticated;
+
 -- Pico helper: acknowledge command execution and write normalized logs.
 CREATE OR REPLACE FUNCTION public.report_alarm_command_result(
   p_command_id UUID,
@@ -408,12 +428,14 @@ DECLARE
 BEGIN
   WITH deleted_logs AS (
     DELETE FROM public.alarm_logs
+    WHERE id IS NOT NULL
     RETURNING 1
   )
   SELECT COUNT(*) INTO v_logs FROM deleted_logs;
 
   WITH deleted_commands AS (
     DELETE FROM public.alarm_commands
+    WHERE id IS NOT NULL
     RETURNING 1
   )
   SELECT COUNT(*) INTO v_commands FROM deleted_commands;
