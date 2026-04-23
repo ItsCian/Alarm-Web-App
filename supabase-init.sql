@@ -386,6 +386,29 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.report_alarm_command_result(UUID, TEXT, TEXT) TO anon, authenticated;
 
+-- Pico helper: write a warning log 10 seconds before alarm trigger.
+CREATE OR REPLACE FUNCTION public.report_alarm_warning_10s(
+  p_message TEXT DEFAULT 'Alarm will trigger in 10 seconds',
+  p_metadata JSONB DEFAULT '{}'::jsonb
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  INSERT INTO public.alarm_logs (level, event_type, message, metadata)
+  VALUES (
+    'warning',
+    'alarm_warning_10s',
+    p_message,
+    COALESCE(p_metadata, '{}'::jsonb) || jsonb_build_object('seconds_remaining', 10)
+  );
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.report_alarm_warning_10s(TEXT, JSONB) TO anon, authenticated;
+
 -- Pico helper: write a log entry when a sensor/intrusion triggers the alarm.
 CREATE OR REPLACE FUNCTION public.report_alarm_trigger(
   p_trigger_source TEXT DEFAULT 'sensor',

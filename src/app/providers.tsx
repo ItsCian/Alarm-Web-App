@@ -13,7 +13,56 @@ import type { AlarmStatus } from "@/lib/hooks";
 export function Providers({ children }: { children: ReactNode }) {
   const [mounted, setMounted] = useState(false);
   const lastAlarmStatusRef = useRef<AlarmStatus | null>(null);
-  const lastNotifiedTriggerLogIdRef = useRef<string | null>(null);
+  const lastNotifiedLogIdRef = useRef<string | null>(null);
+
+  const getRealtimeAlarmNotification = useCallback(
+    (row: Record<string, unknown>) => {
+      const eventType = String(row.event_type ?? "");
+      const message = String(row.message ?? "");
+      const metadata =
+        row.metadata && typeof row.metadata === "object"
+          ? (row.metadata as Record<string, unknown>)
+          : null;
+
+      if (eventType === "alarm_triggered") {
+        return {
+          title: "Alarm active",
+          body: message || "The alarm is sounding now.",
+          tag: "alarm-triggered",
+        };
+      }
+
+      const hasTenSecondEventType = [
+        "alarm_countdown_10s",
+        "alarm_warning_10s",
+        "alarm_pretrigger_10s",
+        "alarm_10s_warning",
+      ].includes(eventType);
+
+      const hasTenSecondMetadata =
+        metadata?.seconds_remaining === 10 ||
+        metadata?.countdown_seconds === 10;
+
+      const hasTenSecondMessage = /\b10\s*(s|sec|secs|second|seconds)\b/i.test(
+        message,
+      );
+
+      if (
+        hasTenSecondEventType ||
+        hasTenSecondMetadata ||
+        hasTenSecondMessage
+      ) {
+        return {
+          title: "Alarm in 10 seconds",
+          body: message || "Warning: alarm will trigger in 10 seconds.",
+          tag: "alarm-warning-10s",
+        };
+      }
+
+      return null;
+    },
+    [],
+  );
 
   const showBrowserNotification = useCallback(
     async (title: string, body: string, tag: string) => {
@@ -77,26 +126,27 @@ export function Providers({ children }: { children: ReactNode }) {
         return;
       }
 
-      const eventType = String(nextRow.event_type ?? "");
-      if (eventType !== "alarm_triggered") {
+      const nextNotification = getRealtimeAlarmNotification(nextRow);
+      if (!nextNotification) {
         return;
       }
 
       const logId = String(nextRow.id ?? "");
-      if (logId && lastNotifiedTriggerLogIdRef.current === logId) {
+      if (logId && lastNotifiedLogIdRef.current === logId) {
         return;
       }
 
       if (logId) {
-        lastNotifiedTriggerLogIdRef.current = logId;
+        lastNotifiedLogIdRef.current = logId;
       }
 
-      const message = String(
-        nextRow.message ?? "Alarm is active. Check the remote view now.",
+      await showBrowserNotification(
+        nextNotification.title,
+        nextNotification.body,
+        nextNotification.tag,
       );
-      await showBrowserNotification("Alarm active", message, "alarm-triggered");
     },
-    [showBrowserNotification],
+    [getRealtimeAlarmNotification, showBrowserNotification],
   );
 
   useEffect(() => {
