@@ -2,6 +2,8 @@
 
 import { useEffect } from "react";
 
+const NOTIFICATION_PROMPT_KEY = "alarm-notification-prompted";
+
 export function ServiceWorkerRegister() {
   useEffect(() => {
     let updateInterval: ReturnType<typeof setInterval> | null = null;
@@ -22,6 +24,15 @@ export function ServiceWorkerRegister() {
             "Notification" in window &&
             Notification.permission === "default"
           ) {
+            const alreadyPrompted =
+              window.localStorage.getItem(NOTIFICATION_PROMPT_KEY) === "true";
+
+            if (alreadyPrompted) {
+              return;
+            }
+
+            window.localStorage.setItem(NOTIFICATION_PROMPT_KEY, "true");
+
             const wantsNotifications = window.confirm(
               "Would you like to enable notifications for alarm status updates?",
             );
