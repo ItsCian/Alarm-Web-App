@@ -29,6 +29,10 @@ WIFI_PASSWORD        = "12345678"
 SUPABASE_URL         = "https://aduaxoxnhfpbzybxrhye.supabase.co"
 SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFkdWF4b3huaGZwYnp5YnhyaHllIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTU0Nzc5NSwiZXhwIjoyMDkxMTIzNzk1fQ.qLAOO6sd_QVOiJjrc33OYzeU-qPpFhHV92IM-JRzkAM"
 
+# URL of deployed Next.js API route: https://<your-domain>/api/push/dispatch
+PUSH_DISPATCH_URL    = "https://alarm-web-app-one.vercel.app/api/push/dispatch"
+PUSH_DISPATCH_SECRET = "876fa9ecd641d877ec7bc7f2a83f596bad4a67f8927886dce670bcc1f01d7a61"
+
 # ══════════════════════════════════════════════════════════════
 #  MATÉRIEL — variables exactes fournies
 # ══════════════════════════════════════════════════════════════
@@ -259,6 +263,53 @@ def sb_report_alarm_trigger(trigger_source, message, metadata=None):
         print("sb_report_alarm_trigger error:", e)
         sb_log("warning", "alarm_triggered", message, metadata)
 
+def sb_report_alarm_warning_10s(message="Alarm will trigger in 10 seconds", metadata=None):
+    if not _wifi_ok:
+        return
+
+    payload = {
+        "p_message": message,
+        "p_metadata": metadata or {},
+    }
+
+    try:
+        r = urequests.post(
+            SUPABASE_URL + "/rest/v1/rpc/report_alarm_warning_10s",
+            headers=_headers(),
+            data=_json_payload(payload),
+        )
+        if getattr(r, "status_code", 0) >= 400:
+            print("sb_report_alarm_warning_10s HTTP error:", r.status_code, getattr(r, "text", ""))
+            r.close()
+            sb_log("warning", "alarm_warning_10s", message, metadata)
+            return
+        r.close()
+    except Exception as e:
+        print("sb_report_alarm_warning_10s error:", e)
+        sb_log("warning", "alarm_warning_10s", message, metadata)
+
+def push_dispatch(event_type, message):
+    if not _wifi_ok or not PUSH_DISPATCH_URL or not PUSH_DISPATCH_SECRET:
+        return
+
+    try:
+        r = urequests.post(
+            PUSH_DISPATCH_URL,
+            headers={
+                "Content-Type": "application/json",
+                "x-push-secret": PUSH_DISPATCH_SECRET,
+            },
+            data=_json_payload({
+                "eventType": event_type,
+                "message": message,
+            }),
+        )
+        if getattr(r, "status_code", 0) >= 400:
+            print("push_dispatch HTTP error:", r.status_code, getattr(r, "text", ""))
+        r.close()
+    except Exception as e:
+        print("push_dispatch error:", e)
+
 # ══════════════════════════════════════════════════════════════
 #  7-SEGMENTS
 # ══════════════════════════════════════════════════════════════
@@ -415,11 +466,11 @@ def main():
             global_etat       = ETAT_INTRUSION
             temps_debut       = time.time()
             alarme_log_envoye = False
-            sb_report_alarm_trigger(
-                "intrusion_detected",
+            sb_report_alarm_warning_10s(
                 "Mouvement detecte - 10s pour desarmer",
                 {"state": "intrusion_detected"},
             )
+            push_dispatch("alarm_warning_10s", "Mouvement detecte - 10s pour desarmer")
             print("INTRUSION detectee !!!")
 
         # ── Scan badge RFID ───────────────────────────────────
@@ -531,6 +582,7 @@ def main():
                     "ALARME EN COURS - sirene active",
                     {"state": "alarm_sounding"},
                 )
+                push_dispatch("alarm_sounding", "ALARME EN COURS - sirene active")
                 sb_update_system_state("armed",
                     error_msg="Intrusion non resolue — alarme active")
                 print("ALARME DECLENCHEE")

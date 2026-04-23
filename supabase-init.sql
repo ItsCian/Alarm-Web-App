@@ -63,6 +63,17 @@ CREATE TABLE IF NOT EXISTS public.alarm_logs (
   metadata JSONB NOT NULL DEFAULT '{}'::jsonb
 );
 
+CREATE TABLE IF NOT EXISTS public.push_subscriptions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  endpoint TEXT NOT NULL UNIQUE,
+  subscription JSONB NOT NULL,
+  user_agent TEXT,
+  last_seen_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  is_active BOOLEAN NOT NULL DEFAULT TRUE
+);
+
 -- ============================================================================
 -- 2. ENABLE ROW LEVEL SECURITY (RLS)
 -- ============================================================================
@@ -73,6 +84,7 @@ ALTER TABLE public.alarm_system_state ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.alarm_device_status ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.alarm_commands ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.alarm_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.push_subscriptions ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================================
 -- 3. CREATE RLS POLICIES
