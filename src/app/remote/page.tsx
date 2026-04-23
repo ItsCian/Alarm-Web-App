@@ -144,21 +144,21 @@ export default function RemotePage() {
 
               <div className="flex flex-wrap gap-2">
                 <Button
-                  disabled={isBusy || alarmStatus === "armed"}
+                  disabled={isBusy || !isOnline || alarmStatus === "armed"}
                   onClick={() => runAction("arm")}
                   variant="default"
                 >
                   {runningAction === "arm" ? "Arming..." : "Arm Alarm"}
                 </Button>
                 <Button
-                  disabled={isBusy || alarmStatus === "disarmed"}
+                  disabled={isBusy || !isOnline || alarmStatus === "disarmed"}
                   onClick={() => runAction("disarm")}
                   variant="outline"
                 >
                   {runningAction === "disarm" ? "Disarming..." : "Disarm Alarm"}
                 </Button>
                 <Button
-                  disabled={isBusy}
+                  disabled={isBusy || !isOnline}
                   onClick={() => runAction("test")}
                   variant="secondary"
                 >

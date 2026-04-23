@@ -135,6 +135,8 @@ SET search_path = public
 AS $$
 DECLARE
   v_connected BOOLEAN := FALSE;
+  v_last_heartbeat_at TIMESTAMP WITH TIME ZONE;
+  v_is_stale BOOLEAN := FALSE;
   v_command_id UUID;
   v_message TEXT;
 BEGIN
@@ -142,10 +144,37 @@ BEGIN
     RAISE EXCEPTION 'Unsupported alarm action: %', p_action;
   END IF;
 
-  SELECT is_connected
-    INTO v_connected
+  SELECT is_connected, last_heartbeat_at
+    INTO v_connected, v_last_heartbeat_at
   FROM public.alarm_device_status
   WHERE id = 1;
+
+  v_is_stale := (
+    v_last_heartbeat_at IS NULL
+    OR EXTRACT(EPOCH FROM (NOW() - v_last_heartbeat_at)) > 70
+  );
+
+  IF v_is_stale THEN
+    IF COALESCE(v_connected, FALSE) = TRUE THEN
+      UPDATE public.alarm_device_status
+      SET is_connected = FALSE,
+          updated_at = NOW()
+      WHERE id = 1;
+
+      INSERT INTO public.alarm_logs (level, event_type, message, metadata)
+      VALUES (
+        'warning',
+        'device_offline_timeout',
+        'Physical alarm marked offline: heartbeat timeout',
+        jsonb_build_object(
+          'last_heartbeat_at', v_last_heartbeat_at,
+          'timeout_seconds', 70
+        )
+      );
+    END IF;
+
+    v_connected := FALSE;
+  END IF;
 
   IF COALESCE(v_connected, FALSE) = FALSE THEN
     v_message := CASE

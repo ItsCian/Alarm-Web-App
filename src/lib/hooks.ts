@@ -232,8 +232,14 @@ function normalizeAlarmState(row: AlarmStateRow): AlarmSystemState {
 }
 
 function normalizeAlarmDevice(row: AlarmDeviceRow): AlarmDeviceStatus {
+  const lastHeartbeatTime = row.last_heartbeat_at
+    ? Date.parse(row.last_heartbeat_at)
+    : Number.NaN;
+  const heartbeatFresh =
+    Number.isFinite(lastHeartbeatTime) && Date.now() - lastHeartbeatTime <= 70_000;
+
   return {
-    isConnected: row.is_connected,
+    isConnected: row.is_connected && heartbeatFresh,
     updatedAt: row.updated_at,
     lastHeartbeatAt: row.last_heartbeat_at,
   };
